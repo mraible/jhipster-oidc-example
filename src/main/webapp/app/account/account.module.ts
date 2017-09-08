@@ -4,20 +4,8 @@ import { RouterModule } from '@angular/router';
 import { OjoSharedModule } from '../shared';
 
 import {
-    Register,
-    ActivateService,
-    PasswordService,
-    PasswordResetInitService,
-    PasswordResetFinishService,
     SessionsService,
     SessionsComponent,
-    PasswordStrengthBarComponent,
-    RegisterComponent,
-    ActivateComponent,
-    PasswordComponent,
-    PasswordResetInitComponent,
-    PasswordResetFinishComponent,
-    SettingsComponent,
     accountState
 } from './';
 
@@ -27,22 +15,10 @@ import {
         RouterModule.forRoot(accountState, { useHash: true })
     ],
     declarations: [
-        ActivateComponent,
-        RegisterComponent,
-        PasswordComponent,
-        PasswordStrengthBarComponent,
-        PasswordResetInitComponent,
-        PasswordResetFinishComponent,
-        SessionsComponent,
-        SettingsComponent
+        SessionsComponent
     ],
     providers: [
-        SessionsService,
-        Register,
-        ActivateService,
-        PasswordService,
-        PasswordResetInitService,
-        PasswordResetFinishService
+        SessionsService
     ],
     schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

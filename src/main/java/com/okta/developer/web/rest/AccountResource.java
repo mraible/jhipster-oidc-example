@@ -2,6 +2,7 @@ package com.okta.developer.web.rest;
 
 import com.codahale.metrics.annotation.Timed;
 
+import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.PersistentToken;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.PersistentTokenRepository;
@@ -21,12 +22,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
+import org.springframework.security.oauth2.provider.authentication.OAuth2AuthenticationDetails;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.security.Principal;
 import java.util.*;
 
 /**
@@ -42,66 +46,14 @@ public class AccountResource {
 
     private final UserService userService;
 
-    private final MailService mailService;
-
     private final PersistentTokenRepository persistentTokenRepository;
 
-    private static final String CHECK_ERROR_MESSAGE = "Incorrect password";
-
     public AccountResource(UserRepository userRepository, UserService userService,
-            MailService mailService, PersistentTokenRepository persistentTokenRepository) {
+                           PersistentTokenRepository persistentTokenRepository) {
 
         this.userRepository = userRepository;
         this.userService = userService;
-        this.mailService = mailService;
         this.persistentTokenRepository = persistentTokenRepository;
-    }
-
-    /**
-     * POST  /register : register the user.
-     *
-     * @param managedUserVM the managed user View Model
-     * @return the ResponseEntity with status 201 (Created) if the user is registered or 400 (Bad Request) if the login or email is already in use
-     */
-    @PostMapping(path = "/register",
-        produces={MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_PLAIN_VALUE})
-    @Timed
-    public ResponseEntity registerAccount(@Valid @RequestBody ManagedUserVM managedUserVM) {
-
-        HttpHeaders textPlainHeaders = new HttpHeaders();
-        textPlainHeaders.setContentType(MediaType.TEXT_PLAIN);
-        if (!checkPasswordLength(managedUserVM.getPassword())) {
-            return new ResponseEntity<>(CHECK_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
-        }
-        return userRepository.findOneByLogin(managedUserVM.getLogin().toLowerCase())
-            .map(user -> new ResponseEntity<>("login already in use", textPlainHeaders, HttpStatus.BAD_REQUEST))
-            .orElseGet(() -> userRepository.findOneByEmail(managedUserVM.getEmail())
-                .map(user -> new ResponseEntity<>("email address already in use", textPlainHeaders, HttpStatus.BAD_REQUEST))
-                .orElseGet(() -> {
-                    User user = userService
-                        .createUser(managedUserVM.getLogin(), managedUserVM.getPassword(),
-                            managedUserVM.getFirstName(), managedUserVM.getLastName(),
-                            managedUserVM.getEmail().toLowerCase(), managedUserVM.getImageUrl(),
-                            managedUserVM.getLangKey());
-
-                    mailService.sendActivationEmail(user);
-                    return new ResponseEntity<>(HttpStatus.CREATED);
-                })
-        );
-    }
-
-    /**
-     * GET  /activate : activate the registered user.
-     *
-     * @param key the activation key
-     * @return the ResponseEntity with status 200 (OK) and the activated user in body, or status 500 (Internal Server Error) if the user couldn't be activated
-     */
-    @GetMapping("/activate")
-    @Timed
-    public ResponseEntity<String> activateAccount(@RequestParam(value = "key") String key) {
-        return userService.activateRegistration(key)
-            .map(user -> new ResponseEntity<String>(HttpStatus.OK))
-            .orElse(new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
     /**
@@ -124,10 +76,64 @@ public class AccountResource {
      */
     @GetMapping("/account")
     @Timed
-    public ResponseEntity<UserDTO> getAccount() {
-        return Optional.ofNullable(userService.getUserWithAuthorities())
-            .map(user -> new ResponseEntity<>(new UserDTO(user), HttpStatus.OK))
-            .orElse(new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<UserDTO> getAccount(Principal principal) {
+        OAuth2Authentication authentication = (OAuth2Authentication) principal;
+        LinkedHashMap<String, Object> details = (LinkedHashMap) authentication.getUserAuthentication().getDetails();
+        User user = new User();
+        user.setLogin(details.get("preferred_username").toString());
+
+        if (details.get("given_name") != null) {
+            user.setFirstName(details.get("given_name").toString());
+        }
+        if (details.get("family_name") != null) {
+            user.setFirstName(details.get("family_name").toString());
+        }
+        if (details.get("email_verified") != null) {
+            user.setActivated((Boolean) details.get("email_verified"));
+        }
+        if (details.get("email") != null) {
+            user.setEmail(details.get("email").toString());
+        }
+        if (details.get("locale") != null) {
+            String locale = details.get("locale").toString();
+            String langKey = locale.substring(0, locale.indexOf("-"));
+            user.setLangKey(langKey);
+            user.setEmail(details.get("locale").toString());
+        }
+
+        Set<Authority> authorities = new LinkedHashSet<>();
+        // get groups from details
+        if (details.get("groups") != null) {
+            List groups = (ArrayList) details.get("groups");
+            groups.forEach(group -> {
+                Authority authority = new Authority();
+                authority.setName(group.toString());
+                authorities.add(authority);
+            });
+        } else {
+            authentication.getAuthorities().forEach(role -> {
+                Authority authority = new Authority();
+                authority.setName(role.getAuthority());
+                authorities.add(authority);
+            });
+        }
+
+        user.setAuthorities(authorities);
+        UserDTO userDTO = new UserDTO(user);
+
+        // save account in to sync users between IdP and JHipster's local database
+        Optional<User> existingUser = userRepository.findOneByLogin(userDTO.getLogin());
+        if (existingUser.isPresent()) {
+            log.debug("Updating user '{}' in local database...", userDTO.getLogin());
+            userService.updateUser(userDTO.getFirstName(), userDTO.getLastName(), userDTO.getEmail(),
+                userDTO.getLangKey(), userDTO.getImageUrl());
+        } else {
+            log.debug("Saving user '{}' in local database...", userDTO.getLogin());
+            userRepository.save(user);
+        }
+
+        return new ResponseEntity<>(userDTO, HttpStatus.OK);
     }
 
     /**
@@ -155,27 +161,10 @@ public class AccountResource {
     }
 
     /**
-     * POST  /account/change_password : changes the current user's password
-     *
-     * @param password the new password
-     * @return the ResponseEntity with status 200 (OK), or status 400 (Bad Request) if the new password is not strong enough
-     */
-    @PostMapping(path = "/account/change_password",
-        produces = MediaType.TEXT_PLAIN_VALUE)
-    @Timed
-    public ResponseEntity changePassword(@RequestBody String password) {
-        if (!checkPasswordLength(password)) {
-            return new ResponseEntity<>(CHECK_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
-        }
-        userService.changePassword(password);
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    /**
      * GET  /account/sessions : get the current open sessions.
      *
      * @return the ResponseEntity with status 200 (OK) and the current open sessions in body,
-     *  or status 500 (Internal Server Error) if the current open sessions couldn't be retrieved
+     * or status 500 (Internal Server Error) if the current open sessions couldn't be retrieved
      */
     @GetMapping("/account/sessions")
     @Timed
@@ -189,16 +178,16 @@ public class AccountResource {
 
     /**
      * DELETE  /account/sessions?series={series} : invalidate an existing session.
-     *
+     * <p>
      * - You can only delete your own sessions, not any other user's session
      * - If you delete one of your existing sessions, and that you are currently logged in on that session, you will
-     *   still be able to use that session, until you quit your browser: it does not work in real time (there is
-     *   no API for that), it only removes the "remember me" cookie
+     * still be able to use that session, until you quit your browser: it does not work in real time (there is
+     * no API for that), it only removes the "remember me" cookie
      * - This is also true if you invalidate your current session: you will still be able to use it until you close
-     *   your browser or that the session times out. But automatic login (the "remember me" cookie) will not work
-     *   anymore.
-     *   There is an API to invalidate the current session, but there is no API to check which session uses which
-     *   cookie.
+     * your browser or that the session times out. But automatic login (the "remember me" cookie) will not work
+     * anymore.
+     * There is an API to invalidate the current session, but there is no API to check which session uses which
+     * cookie.
      *
      * @param series the series of an existing session
      * @throws UnsupportedEncodingException if the series couldnt be URL decoded
@@ -211,47 +200,5 @@ public class AccountResource {
             persistentTokenRepository.findByUser(u).stream()
                 .filter(persistentToken -> StringUtils.equals(persistentToken.getSeries(), decodedSeries))
                 .findAny().ifPresent(t -> persistentTokenRepository.delete(decodedSeries)));
-    }
-
-    /**
-     * POST   /account/reset_password/init : Send an email to reset the password of the user
-     *
-     * @param mail the mail of the user
-     * @return the ResponseEntity with status 200 (OK) if the email was sent, or status 400 (Bad Request) if the email address is not registered
-     */
-    @PostMapping(path = "/account/reset_password/init",
-        produces = MediaType.TEXT_PLAIN_VALUE)
-    @Timed
-    public ResponseEntity requestPasswordReset(@RequestBody String mail) {
-        return userService.requestPasswordReset(mail)
-            .map(user -> {
-                mailService.sendPasswordResetMail(user);
-                return new ResponseEntity<>("email was sent", HttpStatus.OK);
-            }).orElse(new ResponseEntity<>("email address not registered", HttpStatus.BAD_REQUEST));
-    }
-
-    /**
-     * POST   /account/reset_password/finish : Finish to reset the password of the user
-     *
-     * @param keyAndPassword the generated key and the new password
-     * @return the ResponseEntity with status 200 (OK) if the password has been reset,
-     * or status 400 (Bad Request) or 500 (Internal Server Error) if the password could not be reset
-     */
-    @PostMapping(path = "/account/reset_password/finish",
-        produces = MediaType.TEXT_PLAIN_VALUE)
-    @Timed
-    public ResponseEntity<String> finishPasswordReset(@RequestBody KeyAndPasswordVM keyAndPassword) {
-        if (!checkPasswordLength(keyAndPassword.getNewPassword())) {
-            return new ResponseEntity<>(CHECK_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
-        }
-        return userService.completePasswordReset(keyAndPassword.getNewPassword(), keyAndPassword.getKey())
-              .map(user -> new ResponseEntity<String>(HttpStatus.OK))
-              .orElse(new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
-    }
-
-    private boolean checkPasswordLength(String password) {
-        return !StringUtils.isEmpty(password) &&
-            password.length() >= ManagedUserVM.PASSWORD_MIN_LENGTH &&
-            password.length() <= ManagedUserVM.PASSWORD_MAX_LENGTH;
     }
 }

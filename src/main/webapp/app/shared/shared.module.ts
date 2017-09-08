@@ -10,10 +10,8 @@ import {
     UserService,
     StateStorageService,
     LoginService,
-    LoginModalService,
     Principal,
-    HasAnyAuthorityDirective,
-    JhiLoginModalComponent
+    HasAnyAuthorityDirective
 } from './';
 
 @NgModule({
@@ -22,12 +20,10 @@ import {
         OjoSharedCommonModule
     ],
     declarations: [
-        JhiLoginModalComponent,
         HasAnyAuthorityDirective
     ],
     providers: [
         LoginService,
-        LoginModalService,
         AccountService,
         StateStorageService,
         Principal,
@@ -36,10 +32,8 @@ import {
         UserService,
         DatePipe
     ],
-    entryComponents: [JhiLoginModalComponent],
     exports: [
         OjoSharedCommonModule,
-        JhiLoginModalComponent,
         HasAnyAuthorityDirective,
         DatePipe
     ],

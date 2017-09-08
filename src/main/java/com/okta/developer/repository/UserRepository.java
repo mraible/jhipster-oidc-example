@@ -16,11 +16,7 @@ import java.time.Instant;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findOneByActivationKey(String activationKey);
-
     List<User> findAllByActivatedIsFalseAndCreatedDateBefore(Instant dateTime);
-
-    Optional<User> findOneByResetKey(String resetKey);
 
     Optional<User> findOneByEmail(String email);
 
