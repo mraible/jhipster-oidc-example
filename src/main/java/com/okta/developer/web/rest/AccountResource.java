@@ -22,6 +22,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.authentication.OAuth2AuthenticationDetails;
 import org.springframework.web.bind.annotation.*;
@@ -102,25 +106,29 @@ public class AccountResource {
             user.setEmail(details.get("locale").toString());
         }
 
-        Set<Authority> authorities = new LinkedHashSet<>();
+        Set<Authority> userAuthorities = new LinkedHashSet<>();
+
         // get groups from details
         if (details.get("groups") != null) {
             List groups = (ArrayList) details.get("groups");
             groups.forEach(group -> {
-                Authority authority = new Authority();
-                authority.setName(group.toString());
-                authorities.add(authority);
+                Authority userAuthority = new Authority();
+                userAuthority.setName(group.toString());
+                userAuthorities.add(userAuthority);
             });
         } else {
             authentication.getAuthorities().forEach(role -> {
-                Authority authority = new Authority();
-                authority.setName(role.getAuthority());
-                authorities.add(authority);
+                Authority userAuthority = new Authority();
+                userAuthority.setName(role.getAuthority());
+                userAuthorities.add(userAuthority);
             });
         }
 
-        user.setAuthorities(authorities);
+        user.setAuthorities(userAuthorities);
         UserDTO userDTO = new UserDTO(user);
+
+        // todo: update Spring Security Authorities to match group claim from IdP
+        // This might provide the solution: https://stackoverflow.com/questions/35056169/how-to-get-custom-user-info-from-oauth2-authorization-server-user-endpoint
 
         // save account in to sync users between IdP and JHipster's local database
         Optional<User> existingUser = userRepository.findOneByLogin(userDTO.getLogin());
@@ -134,30 +142,6 @@ public class AccountResource {
         }
 
         return new ResponseEntity<>(userDTO, HttpStatus.OK);
-    }
-
-    /**
-     * POST  /account : update the current user information.
-     *
-     * @param userDTO the current user information
-     * @return the ResponseEntity with status 200 (OK), or status 400 (Bad Request) or 500 (Internal Server Error) if the user couldn't be updated
-     */
-    @PostMapping("/account")
-    @Timed
-    public ResponseEntity saveAccount(@Valid @RequestBody UserDTO userDTO) {
-        final String userLogin = SecurityUtils.getCurrentUserLogin();
-        Optional<User> existingUser = userRepository.findOneByEmail(userDTO.getEmail());
-        if (existingUser.isPresent() && (!existingUser.get().getLogin().equalsIgnoreCase(userLogin))) {
-            return ResponseEntity.badRequest().headers(HeaderUtil.createFailureAlert("user-management", "emailexists", "Email already in use")).body(null);
-        }
-        return userRepository
-            .findOneByLogin(userLogin)
-            .map(u -> {
-                userService.updateUser(userDTO.getFirstName(), userDTO.getLastName(), userDTO.getEmail(),
-                    userDTO.getLangKey(), userDTO.getImageUrl());
-                return new ResponseEntity(HttpStatus.OK);
-            })
-            .orElseGet(() -> new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
     /**
