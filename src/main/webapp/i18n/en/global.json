@@ -46,9 +46,9 @@
         "messages": {
             "info": {
                 "authenticated": {
-                    "prefix": "If you want to ",
-                    "link": "sign in",
-                    "suffix": ", you can try the default accounts:<br/>- Administrator (login=\"admin\" and password=\"admin\") <br/>- User (login=\"user\" and password=\"user\")."
+                    "prefix": "Please ",
+                    "link": "sign in or register",
+                    "suffix": ".<br><br><strong>NOTE:</strong> You'll have to configure accounts, add them to ROLE_ADMIN/ROLE_USER groups, include groups as a claim, and enable registration on your Identity Provider."
                 },
                 "register": {
                     "noaccount": "You don't have an account yet?",
