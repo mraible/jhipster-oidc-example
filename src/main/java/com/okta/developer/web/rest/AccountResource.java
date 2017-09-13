@@ -96,9 +96,12 @@ public class AccountResource {
                 if (details.get("groups") != null) {
                     List groups = (ArrayList) details.get("groups");
                     groups.forEach(group -> {
-                        Authority userAuthority = new Authority();
-                        userAuthority.setName(group.toString());
-                        userAuthorities.add(userAuthority);
+                        // Ignore Okta's Everyone group, or add it to Liquibase's authorities.csv
+                        if (!String.valueOf(group).equalsIgnoreCase("everyone")) {
+                            Authority userAuthority = new Authority();
+                            userAuthority.setName(group.toString());
+                            userAuthorities.add(userAuthority);
+                        }
                     });
                 } else {
                     authentication.getAuthorities().forEach(role -> {

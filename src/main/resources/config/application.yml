@@ -47,7 +47,6 @@ spring:
         mode: XHTML
 
 #oauth2.issuer: https://dev-158606.oktapreview.com/oauth2/default
-#http://localhost:8180/auth/realms/master/.well-known/openid-configuration
 oauth2.issuer: http://localhost:8180/auth/realms/master
 
 security:

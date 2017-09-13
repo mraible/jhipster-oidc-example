@@ -9,7 +9,7 @@ describe('administration', () => {
         browser.get('/');
         browser.waitForAngular();
         navBarPage = new NavBarPage(true);
-        navBarPage.getSignInPage().loginWithOAuth('admin', 'admin');
+        navBarPage.getSignInPage().loginWithOAuth('admin@jhipster.org', 'Java is hip in 2017!');
         browser.waitForAngular();
     });
 

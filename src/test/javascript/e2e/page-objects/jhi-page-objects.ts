@@ -86,8 +86,8 @@ export class NavBarPage {
 const ec = protractor.ExpectedConditions;
 
 export class SignInPage {
-    username = element(by.id('username'));
-    password = element(by.id('password'));
+    username = element(by.name('username'));
+    password = element(by.name('password'));
     loginButton = element(by.css('input[type=submit]'));
 
     setUserName(username) {

@@ -1,10 +1,11 @@
-import { browser, element, by } from 'protractor';
+import { browser, element, by, protractor } from 'protractor';
 import { NavBarPage, SignInPage } from './../page-objects/jhi-page-objects';
 
 describe('account', () => {
 
     let navBarPage: NavBarPage;
     let signInPage: SignInPage;
+    const ec = protractor.ExpectedConditions;
 
     beforeAll(() => {
         browser.get('/');
@@ -19,31 +20,40 @@ describe('account', () => {
             expect(value).toMatch(expect1);
         });
         signInPage = navBarPage.getSignInPage();
-        browser.waitForAngularEnabled(false);
-        signInPage.loginWithOAuth('admin', 'foo');
+        signInPage.loginWithOAuth('admin@jhipster.org', 'foo');
 
-        // keycloak
-        const expect2 = "Invalid username or password.";
-        const error = element.all(by.css('.alert-error')).first().getText();
-        expect(error).toMatch(expect2);
+        // Keycloak
+        const alert = element.all(by.css('.alert-error'));
+        alert.isPresent().then((result) => {
+            if (result) {
+                expect(alert.first().getText()).toMatch("Invalid username or password.");
+            } else {
+                // Okta
+                const error = element.all(by.css('.infobox-error')).first();
+                browser.wait(ec.visibilityOf(error), 2000).then(() => {
+                    expect(error.getText()).toMatch("Sign in failed!");
+                });
+            }
+        });
     });
 
     it('should login successfully with admin account', () => {
         signInPage.clearUserName();
-        signInPage.setUserName('admin');
+        signInPage.setUserName('admin@jhipster.org');
         signInPage.clearPassword();
-        signInPage.setPassword('admin');
+        signInPage.setPassword('Java is hip in 2017!');
         signInPage.login();
 
         browser.waitForAngular();
 
         const expect2 = /home.logged.message/;
-        element.all(by.css('.alert-success span')).getAttribute('jhiTranslate').then((value) => {
-            expect(value).toMatch(expect2);
+        const success = element.all(by.css('.alert-success span')).first();
+        browser.wait(ec.visibilityOf(success), 2000).then(() => {
+            success.getAttribute('jhiTranslate').then((value) => {
+                expect(value).toMatch(expect2);
+            });
         });
-    });
 
-    afterAll(() => {
         navBarPage.autoSignOut();
     });
 });
