@@ -1,4 +1,5 @@
-import { element, by, ElementFinder } from 'protractor';
+import { element, by, ElementFinder, protractor, browser } from 'protractor';
+
 export class NavBarPage {
     entityMenu = element(by.id('entity-menu'));
     accountMenu = element(by.id('account-menu'));
@@ -61,18 +62,6 @@ export class NavBarPage {
         return new SignInPage();
     }
 
-    getPasswordPage() {
-        this.clickOnAccountMenu();
-        this.clickOnPasswordMenu();
-        return new PasswordPage();
-    }
-
-    getSettingsPage() {
-        this.clickOnAccountMenu();
-        this.clickOnSettingsMenu();
-        return new SettingsPage();
-    }
-
     goToEntity(entityName: string) {
         this.clickOnEntityMenu();
         return this.clickOnEntity(entityName);
@@ -94,10 +83,12 @@ export class NavBarPage {
     }
 }
 
+const ec = protractor.ExpectedConditions;
+
 export class SignInPage {
-    username = element(by.id('username'));
-    password = element(by.id('password'));
-    loginButton = element(by.css('button[type=submit]'));
+    username = element(by.name('username'));
+    password = element(by.name('password'));
+    loginButton = element(by.css('input[type=submit]'));
 
     setUserName(username) {
         this.username.sendKeys(username);
@@ -123,104 +114,21 @@ export class SignInPage {
         this.password.clear();
     }
 
-    autoSignInUsing(username: string, password: string) {
-        this.setUserName(username);
-        this.setPassword(password);
-        return this.login();
+    loginWithOAuth(username: string, password: string) {
+
+        // Entering non angular site, tell webdriver to switch to synchronous mode.
+        browser.waitForAngularEnabled(false);
+
+        this.username.isPresent().then(() => {
+            this.username.sendKeys(username);
+            this.password.sendKeys(password);
+            this.loginButton.click();
+        }).catch(error => {
+            browser.waitForAngularEnabled(true);
+        });
     }
 
     login() {
         return this.loginButton.click();
-    }
-}
-
-export class PasswordPage {
-    password = element(by.id('password'));
-    confirmPassword = element(by.id('confirmPassword'));
-    saveButton = element(by.css('button[type=submit]'));
-    title = element.all(by.css('h2')).first();
-
-    setPassword(password) {
-        this.password.sendKeys(password);
-    }
-
-    getPassword() {
-        return this.password.getAttribute('value');
-    }
-
-    clearPassword() {
-        this.password.clear();
-    }
-
-    setConfirmPassword(confirmPassword) {
-        this.confirmPassword.sendKeys(confirmPassword);
-    }
-
-    getConfirmPassword() {
-        return this.confirmPassword.getAttribute('value');
-    }
-
-    clearConfirmPassword() {
-        this.confirmPassword.clear();
-    }
-
-    getTitle() {
-        return this.title.getAttribute('jhiTranslate');
-    }
-
-    save() {
-        return this.saveButton.click();
-    }
-}
-
-export class SettingsPage {
-    firstName = element(by.id('firstName'));
-    lastName = element(by.id('lastName'));
-    email = element(by.id('email'));
-    saveButton = element(by.css('button[type=submit]'));
-    title = element.all(by.css('h2')).first();
-
-    setFirstName(firstName) {
-        this.firstName.sendKeys(firstName);
-    }
-
-    getFirstName() {
-        return this.firstName.getAttribute('value');
-    }
-
-    clearFirstName() {
-        this.firstName.clear();
-    }
-
-    setLastName(lastName) {
-        this.lastName.sendKeys(lastName);
-    }
-
-    getLastName() {
-        return this.lastName.getAttribute('value');
-    }
-
-    clearLastName() {
-        this.lastName.clear();
-    }
-
-    setEmail(email) {
-        this.email.sendKeys(email);
-    }
-
-    getEmail() {
-        return this.email.getAttribute('value');
-    }
-
-    clearEmail() {
-        this.email.clear();
-    }
-
-    getTitle() {
-        return this.title.getAttribute('jhiTranslate');
-    }
-
-    save() {
-        return this.saveButton.click();
     }
 }

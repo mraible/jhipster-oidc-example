@@ -46,9 +46,27 @@ spring:
     thymeleaf:
         mode: XHTML
 
+#oauth2.issuer: https://dev-158606.oktapreview.com/oauth2/default
+oauth2.issuer: http://localhost:8180/auth/realms/master
+
 security:
     basic:
         enabled: false
+    oauth2:
+        client:
+            #accessTokenUri: ${oauth2.issuer}/v1/token
+            accessTokenUri: ${oauth2.issuer}/protocol/openid-connect/token
+            #userAuthorizationUri: ${oauth2.issuer}/v1/authorize
+            userAuthorizationUri: ${oauth2.issuer}/protocol/openid-connect/auth
+            clientId: 0oabxuli6b3nTccfp0h7
+            #clientSecret: wf7Z-mf_FfUU_oDL62-gtd-obCDhz96u0786h06r
+            clientSecret: 38561a05-6691-4c88-8515-d0a4b1e420a9
+            clientAuthenticationScheme: form
+            scope: openid profile email
+        resource:
+            #userInfoUri: ${oauth2.issuer}/v1/userinfo
+            userInfoUri: ${oauth2.issuer}/protocol/openid-connect/userinfo
+            preferTokenInfo: true
 
 server:
     session:

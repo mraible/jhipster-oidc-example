@@ -40,12 +40,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
     @Column(length = 50, unique = true, nullable = false)
     private String login;
 
-    @JsonIgnore
-    @NotNull
-    @Size(min = 60, max = 60)
-    @Column(name = "password_hash",length = 60)
-    private String password;
-
     @Size(max = 50)
     @Column(name = "first_name", length = 50)
     private String firstName;
@@ -71,19 +65,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
     @Column(name = "image_url", length = 256)
     private String imageUrl;
 
-    @Size(max = 20)
-    @Column(name = "activation_key", length = 20)
-    @JsonIgnore
-    private String activationKey;
-
-    @Size(max = 20)
-    @Column(name = "reset_key", length = 20)
-    @JsonIgnore
-    private String resetKey;
-
-    @Column(name = "reset_date")
-    private Instant resetDate = null;
-
     @JsonIgnore
     @ManyToMany
     @JoinTable(
@@ -93,11 +74,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
     @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
     @BatchSize(size = 20)
     private Set<Authority> authorities = new HashSet<>();
-
-    @JsonIgnore
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "user")
-    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-    private Set<PersistentToken> persistentTokens = new HashSet<>();
 
     public Long getId() {
         return id;
@@ -114,14 +90,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
     //Lowercase the login before saving it in database
     public void setLogin(String login) {
         this.login = StringUtils.lowerCase(login, Locale.ENGLISH);
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getFirstName() {
@@ -164,29 +132,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
         this.activated = activated;
     }
 
-    public String getActivationKey() {
-        return activationKey;
-    }
-
-    public void setActivationKey(String activationKey) {
-        this.activationKey = activationKey;
-    }
-
-    public String getResetKey() {
-        return resetKey;
-    }
-
-    public void setResetKey(String resetKey) {
-        this.resetKey = resetKey;
-    }
-
-    public Instant getResetDate() {
-       return resetDate;
-    }
-
-    public void setResetDate(Instant resetDate) {
-       this.resetDate = resetDate;
-    }
     public String getLangKey() {
         return langKey;
     }
@@ -201,14 +146,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
 
     public void setAuthorities(Set<Authority> authorities) {
         this.authorities = authorities;
-    }
-
-    public Set<PersistentToken> getPersistentTokens() {
-        return persistentTokens;
-    }
-
-    public void setPersistentTokens(Set<PersistentToken> persistentTokens) {
-        this.persistentTokens = persistentTokens;
     }
 
     @Override
@@ -239,7 +176,6 @@ public class User extends AbstractAuditingEntity implements Serializable {
             ", imageUrl='" + imageUrl + '\'' +
             ", activated='" + activated + '\'' +
             ", langKey='" + langKey + '\'' +
-            ", activationKey='" + activationKey + '\'' +
             "}";
     }
 }

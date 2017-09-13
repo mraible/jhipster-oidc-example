@@ -40,8 +40,6 @@ public class CacheConfiguration {
             cm.createCache(com.okta.developer.domain.User.class.getName(), jcacheConfiguration);
             cm.createCache(com.okta.developer.domain.Authority.class.getName(), jcacheConfiguration);
             cm.createCache(com.okta.developer.domain.User.class.getName() + ".authorities", jcacheConfiguration);
-            cm.createCache(com.okta.developer.domain.PersistentToken.class.getName(), jcacheConfiguration);
-            cm.createCache(com.okta.developer.domain.User.class.getName() + ".persistentTokens", jcacheConfiguration);
             // jhipster-needle-ehcache-add-entry
         };
     }

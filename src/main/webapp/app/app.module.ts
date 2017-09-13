@@ -7,7 +7,6 @@ import { Ng2Webstorage } from 'ng2-webstorage';
 import { OjoSharedModule, UserRouteAccessService } from './shared';
 import { OjoHomeModule } from './home/home.module';
 import { OjoAdminModule } from './admin/admin.module';
-import { OjoAccountModule } from './account/account.module';
 import { OjoEntityModule } from './entities/entity.module';
 
 import { customHttpProvider } from './blocks/interceptor/http.provider';
@@ -34,7 +33,6 @@ import {
         OjoSharedModule,
         OjoHomeModule,
         OjoAdminModule,
-        OjoAccountModule,
         OjoEntityModule,
         // jhipster-needle-angular-add-module JHipster will add new module here
     ],

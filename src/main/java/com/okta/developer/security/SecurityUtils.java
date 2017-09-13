@@ -4,6 +4,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
+
+import java.util.LinkedHashMap;
 
 /**
  * Utility class for Spring Security.
@@ -18,6 +21,7 @@ public final class SecurityUtils {
      *
      * @return the login of the current user
      */
+    @SuppressWarnings("unchecked")
     public static String getCurrentUserLogin() {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         Authentication authentication = securityContext.getAuthentication();
@@ -26,6 +30,10 @@ public final class SecurityUtils {
             if (authentication.getPrincipal() instanceof UserDetails) {
                 UserDetails springSecurityUser = (UserDetails) authentication.getPrincipal();
                 userName = springSecurityUser.getUsername();
+            } else if (authentication instanceof OAuth2Authentication) {
+                OAuth2Authentication auth = (OAuth2Authentication) authentication;
+                LinkedHashMap<String, String> details = (LinkedHashMap<String, String>) auth.getUserAuthentication().getDetails();
+                userName = details.get("preferred_username");
             } else if (authentication.getPrincipal() instanceof String) {
                 userName = (String) authentication.getPrincipal();
             }
