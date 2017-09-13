@@ -151,7 +151,6 @@ public class AccountResource {
                 }
                 return new ResponseEntity<>(userDTO, HttpStatus.OK);
             } else {
-                System.out.println("user: " + userService.getUserWithAuthorities());
                 // Allow Spring Security Test to be used to mock users in the database
                 return Optional.ofNullable(userService.getUserWithAuthorities())
                     .map(user -> new ResponseEntity<>(new UserDTO(user), HttpStatus.OK))
