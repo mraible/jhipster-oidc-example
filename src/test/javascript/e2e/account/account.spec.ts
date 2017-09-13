@@ -1,12 +1,10 @@
 import { browser, element, by } from 'protractor';
-import { NavBarPage, SignInPage, PasswordPage, SettingsPage } from './../page-objects/jhi-page-objects';
+import { NavBarPage, SignInPage } from './../page-objects/jhi-page-objects';
 
 describe('account', () => {
 
     let navBarPage: NavBarPage;
     let signInPage: SignInPage;
-    let passwordPage: PasswordPage;
-    let settingsPage: SettingsPage;
 
     beforeAll(() => {
         browser.get('/');
@@ -21,19 +19,16 @@ describe('account', () => {
             expect(value).toMatch(expect1);
         });
         signInPage = navBarPage.getSignInPage();
-        signInPage.autoSignInUsing('admin', 'foo');
+        browser.waitForAngularEnabled(false);
+        signInPage.loginWithOAuth('admin', 'foo');
 
-        const expect2 = /login.messages.error.authentication/;
-        element.all(by.css('.alert-danger')).first().getAttribute('jhiTranslate').then((value) => {
-            expect(value).toMatch(expect2);
-        });
+        // keycloak
+        const expect2 = "Invalid username or password.";
+        const error = element.all(by.css('.alert-error')).first().getText();
+        expect(error).toMatch(expect2);
     });
 
     it('should login successfully with admin account', () => {
-        const expect1 = /global.form.username/;
-        element.all(by.css('.modal-content label')).first().getAttribute('jhiTranslate').then((value) => {
-            expect(value).toMatch(expect1);
-        });
         signInPage.clearUserName();
         signInPage.setUserName('admin');
         signInPage.clearPassword();
@@ -46,45 +41,6 @@ describe('account', () => {
         element.all(by.css('.alert-success span')).getAttribute('jhiTranslate').then((value) => {
             expect(value).toMatch(expect2);
         });
-    });
-
-    it('should be able to update settings', () => {
-        settingsPage = navBarPage.getSettingsPage();
-
-        const expect1 = /settings.title/;
-        settingsPage.getTitle().then((value) => {
-            expect(value).toMatch(expect1);
-        });
-        settingsPage.save();
-
-        const expect2 = /settings.messages.success/;
-        element.all(by.css('.alert-success')).first().getAttribute('jhiTranslate').then((value) => {
-            expect(value).toMatch(expect2);
-        });
-    });
-
-    it('should be able to update password', () => {
-        passwordPage = navBarPage.getPasswordPage();
-
-        expect(passwordPage.getTitle()).toMatch(/password.title/);
-
-        passwordPage.setPassword('newpassword');
-        passwordPage.setConfirmPassword('newpassword');
-        passwordPage.save();
-
-        const expect2 = /password.messages.success/;
-        element.all(by.css('.alert-success')).first().getAttribute('jhiTranslate').then((value) => {
-            expect(value).toMatch(expect2);
-        });
-        navBarPage.autoSignOut();
-        navBarPage.goToSignInPage();
-        signInPage.autoSignInUsing('admin', 'newpassword');
-
-        // change back to default
-        navBarPage.goToPasswordMenu()
-        passwordPage.setPassword('admin');
-        passwordPage.setConfirmPassword('admin');
-        passwordPage.save();
     });
 
     afterAll(() => {
