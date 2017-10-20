@@ -1,4 +1,7 @@
-# oidc
+# Use OpenID Connect Support with JHipster
+
+See [Use OpenID Connect Support with JHipster](https://developer.okta.com/blog/2017/10/20/oidc-with-jhipster) to see how this application was created. You can also [watch a screencast](https://www.youtube.com/watch?v=MaqIsQB1yeQ).
+
 This application was generated using JHipster 4.10.0, you can find documentation and help at [http://www.jhipster.tech/documentation-archive/v4.10.0](http://www.jhipster.tech/documentation-archive/v4.10.0).
 
 ## Development
