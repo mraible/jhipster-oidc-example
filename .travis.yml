@@ -44,12 +44,12 @@ script:
   - yarn test
   - docker-compose -f src/main/docker/keycloak.yml up -d
   - docker-compose -f src/main/docker/postgresql.yml up -d
-  - ./mvnw -q -Pprod &
+  - ./mvnw -q package -Pprod
+  - java -jar target/*.jar &
   - bootPid=$!
   - sleep 60s
   - yarn e2e
   - kill $bootPid
-  - ./mvnw -q package -Pprod -DskipTests
 notifications:
   webhooks:
     on_success: change  # options: [always|never|change] default: always
