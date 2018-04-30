@@ -1,30 +1,35 @@
 package com.okta.developer.web.rest;
-import com.okta.developer.config.Constants;
+
 import com.okta.developer.OidcApp;
 import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.UserRepository;
 import com.okta.developer.security.AuthoritiesConstants;
-import com.okta.developer.web.rest.errors.ExceptionTranslator;
 import com.okta.developer.service.UserService;
+import com.okta.developer.web.rest.errors.ExceptionTranslator;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import java.util.*;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Test class for the AccountResource REST controller.
@@ -41,8 +46,8 @@ public class AccountResourceIntTest {
     @Autowired
     private ExceptionTranslator exceptionTranslator;
 
-    @MockBean
-    private UserService mockUserService;
+    @Autowired
+    private UserService userService;
 
     private MockMvc restUserMockMvc;
 
@@ -52,9 +57,9 @@ public class AccountResourceIntTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
-
         AccountResource accountUserMockResource =
-            new AccountResource(userRepository, mockUserService);
+            new AccountResource(userService);
+
         this.restUserMockMvc = MockMvcBuilders.standaloneSetup(accountUserMockResource)
             .setControllerAdvice(exceptionTranslator)
             .build();
@@ -81,6 +86,7 @@ public class AccountResourceIntTest {
     }
 
     @Test
+    @Transactional
     public void testGetExistingAccount() throws Exception {
         Set<Authority> authorities = new HashSet<>();
         Authority authority = new Authority();
@@ -95,7 +101,7 @@ public class AccountResourceIntTest {
         user.setImageUrl("http://placehold.it/50x50");
         user.setLangKey("en");
         user.setAuthorities(authorities);
-        when(mockUserService.getUserWithAuthorities()).thenReturn(user);
+        userRepository.save(user);
 
         // create security-aware mockMvc
         restUserMockMvc = MockMvcBuilders
@@ -104,7 +110,8 @@ public class AccountResourceIntTest {
             .build();
 
         restUserMockMvc.perform(get("/api/account")
-.with(user(user.getLogin()).roles("ADMIN"))            .accept(MediaType.APPLICATION_JSON))
+            .with(user(user.getLogin()).roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
             .andExpect(jsonPath("$.login").value("test"))
@@ -118,8 +125,6 @@ public class AccountResourceIntTest {
 
     @Test
     public void testGetUnknownAccount() throws Exception {
-        when(mockUserService.getUserWithAuthorities()).thenReturn(null);
-
         restUserMockMvc.perform(get("/api/account")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isInternalServerError());

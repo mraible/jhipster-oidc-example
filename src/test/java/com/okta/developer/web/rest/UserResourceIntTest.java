@@ -1,6 +1,7 @@
 package com.okta.developer.web.rest;
 
 import com.okta.developer.OidcApp;
+import com.okta.developer.config.CacheConfiguration;
 import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.UserRepository;
@@ -18,6 +19,7 @@ import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -29,8 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityManager;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -47,10 +47,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = OidcApp.class)
 public class UserResourceIntTest {
 
-    private static final Long DEFAULT_ID = 1L;
-
     private static final String DEFAULT_LOGIN = "johndoe";
     private static final String UPDATED_LOGIN = "jhipster";
+
+    private static final Long DEFAULT_ID = 1L;
 
     private static final String DEFAULT_PASSWORD = "passjohndoe";
     private static final String UPDATED_PASSWORD = "passjhipster";
@@ -91,6 +91,9 @@ public class UserResourceIntTest {
     @Autowired
     private EntityManager em;
 
+    @Autowired
+    private CacheManager cacheManager;
+
     private MockMvc restUserMockMvc;
 
     private User user;
@@ -98,6 +101,8 @@ public class UserResourceIntTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
+        cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).clear();
+        cacheManager.getCache(UserRepository.USERS_BY_EMAIL_CACHE).clear();
         UserResource userResource = new UserResource(userRepository, userService);
         this.restUserMockMvc = MockMvcBuilders.standaloneSetup(userResource)
             .setCustomArgumentResolvers(pageableArgumentResolver)
@@ -114,9 +119,9 @@ public class UserResourceIntTest {
      */
     public static User createEntity(EntityManager em) {
         User user = new User();
-        user.setLogin(DEFAULT_LOGIN);
+        user.setLogin(DEFAULT_LOGIN + RandomStringUtils.randomAlphabetic(5));
         user.setActivated(true);
-        user.setEmail(DEFAULT_EMAIL);
+        user.setEmail(RandomStringUtils.randomAlphabetic(5) + DEFAULT_EMAIL);
         user.setFirstName(DEFAULT_FIRSTNAME);
         user.setLastName(DEFAULT_LASTNAME);
         user.setImageUrl(DEFAULT_IMAGEURL);
@@ -127,6 +132,8 @@ public class UserResourceIntTest {
     @Before
     public void initTest() {
         user = createEntity(em);
+        user.setLogin(DEFAULT_LOGIN);
+        user.setEmail(DEFAULT_EMAIL);
     }
 
     @Test
@@ -154,6 +161,8 @@ public class UserResourceIntTest {
         // Initialize the database
         userRepository.saveAndFlush(user);
 
+        assertThat(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).get(user.getLogin())).isNull();
+
         // Get the user
         restUserMockMvc.perform(get("/api/users/{login}", user.getLogin()))
             .andExpect(status().isOk())
@@ -164,6 +173,8 @@ public class UserResourceIntTest {
             .andExpect(jsonPath("$.email").value(DEFAULT_EMAIL))
             .andExpect(jsonPath("$.imageUrl").value(DEFAULT_IMAGEURL))
             .andExpect(jsonPath("$.langKey").value(DEFAULT_LANGKEY));
+
+        assertThat(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).get(user.getLogin())).isNotNull();
     }
 
     @Test
@@ -208,20 +219,19 @@ public class UserResourceIntTest {
 
     @Test
     public void testUserDTOtoUser() {
-        UserDTO userDTO = new UserDTO(
-            DEFAULT_ID,
-            DEFAULT_LOGIN,
-            DEFAULT_FIRSTNAME,
-            DEFAULT_LASTNAME,
-            DEFAULT_EMAIL,
-            true,
-            DEFAULT_IMAGEURL,
-            DEFAULT_LANGKEY,
-            DEFAULT_LOGIN,
-            null,
-            DEFAULT_LOGIN,
-            null,
-            Stream.of(AuthoritiesConstants.USER).collect(Collectors.toSet()));
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(DEFAULT_ID);
+        userDTO.setLogin(DEFAULT_LOGIN);
+        userDTO.setFirstName(DEFAULT_FIRSTNAME);
+        userDTO.setLastName(DEFAULT_LASTNAME);
+        userDTO.setEmail(DEFAULT_EMAIL);
+        userDTO.setActivated(true);
+        userDTO.setImageUrl(DEFAULT_IMAGEURL);
+        userDTO.setLangKey(DEFAULT_LANGKEY);
+        userDTO.setCreatedBy(DEFAULT_LOGIN);
+        userDTO.setLastModifiedBy(DEFAULT_LOGIN);
+        userDTO.setAuthorities(Collections.singleton(AuthoritiesConstants.USER));
+
         User user = userMapper.userDTOToUser(userDTO);
         assertThat(user.getId()).isEqualTo(DEFAULT_ID);
         assertThat(user.getLogin()).isEqualTo(DEFAULT_LOGIN);
@@ -245,7 +255,6 @@ public class UserResourceIntTest {
         user.setCreatedDate(Instant.now());
         user.setLastModifiedBy(DEFAULT_LOGIN);
         user.setLastModifiedDate(Instant.now());
-
         Set<Authority> authorities = new HashSet<>();
         Authority authority = new Authority();
         authority.setName(AuthoritiesConstants.USER);
