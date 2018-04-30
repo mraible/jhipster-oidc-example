@@ -45,7 +45,7 @@ script:
   - docker-compose -f src/main/docker/keycloak.yml up -d
   - docker-compose -f src/main/docker/postgresql.yml up -d
   - ./mvnw -q package -Pprod -DskipTests
-  - java -jar target/*.jar &
+  - java -jar target/*.war &
   - bootPid=$!
   - sleep 60s
   - yarn e2e
