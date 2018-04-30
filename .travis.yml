@@ -44,8 +44,11 @@ script:
   - yarn test
   - docker-compose -f src/main/docker/keycloak.yml up -d
   - docker-compose -f src/main/docker/postgresql.yml up -d
-  - ./mvnw -q spring-boot:run &
+  - ./mvnw -q &
+  - bootPid=$!
+  - sleep 30s
   - yarn e2e
+  - kill $bootPid
   - ./mvnw -q package -Pprod -DskipTests
 notifications:
   webhooks:
