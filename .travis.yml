@@ -31,12 +31,13 @@ install:
   - yarn install
 script:
   - chmod +x mvnw
-  - ./mvnw clean test
+  - ./mvnw -q clean test
   - yarn test
   - docker-compose -f src/main/docker/keycloak.yml up -d
-  - ./mvnw spring-boot:run &
+  - docker-compose -f src/main/docker/postgresql.yml up -d
+  - ./mvnw -q spring-boot:run &
   - yarn e2e
-  - ./mvnw package -Pprod -DskipTests
+  - ./mvnw -q package -Pprod -DskipTests
 notifications:
   webhooks:
     on_success: change  # options: [always|never|change] default: always
