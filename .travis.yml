@@ -46,7 +46,7 @@ script:
   - docker-compose -f src/main/docker/postgresql.yml up -d
   - ./mvnw -q &
   - bootPid=$!
-  - sleep 30s
+  - sleep 60s
   - yarn e2e
   - kill $bootPid
   - ./mvnw -q package -Pprod -DskipTests
