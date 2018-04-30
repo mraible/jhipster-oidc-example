@@ -44,7 +44,7 @@ script:
   - yarn test
   - docker-compose -f src/main/docker/keycloak.yml up -d
   - docker-compose -f src/main/docker/postgresql.yml up -d
-  - ./mvnw -q &
+  - ./mvnw -q -Pprod &
   - bootPid=$!
   - sleep 60s
   - yarn e2e
