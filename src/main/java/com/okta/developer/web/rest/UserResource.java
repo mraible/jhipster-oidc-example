@@ -2,16 +2,12 @@ package com.okta.developer.web.rest;
 
 import com.okta.developer.config.Constants;
 import com.codahale.metrics.annotation.Timed;
-
 import com.okta.developer.repository.UserRepository;
 import com.okta.developer.security.AuthoritiesConstants;
-
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.UserDTO;
-
 import com.okta.developer.web.rest.util.PaginationUtil;
 import io.github.jhipster.web.util.ResponseUtil;
-import io.swagger.annotations.ApiParam;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,26 +51,25 @@ public class UserResource {
 
     private final Logger log = LoggerFactory.getLogger(UserResource.class);
 
-    private static final String ENTITY_NAME = "userManagement";
-
     private final UserRepository userRepository;
+
     private final UserService userService;
 
-    public UserResource(UserRepository userRepository,            UserService userService) {
+    public UserResource(UserRepository userRepository, UserService userService) {
 
         this.userRepository = userRepository;
         this.userService = userService;
     }
 
     /**
-     * GET  /users : get all users.
+     * GET /users : get all users.
      *
      * @param pageable the pagination information
      * @return the ResponseEntity with status 200 (OK) and with body all users
      */
     @GetMapping("/users")
     @Timed
-    public ResponseEntity<List<UserDTO>> getAllUsers(@ApiParam Pageable pageable) {
+    public ResponseEntity<List<UserDTO>> getAllUsers(Pageable pageable) {
         final Page<UserDTO> page = userService.getAllManagedUsers(pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(page, "/api/users");
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
@@ -91,7 +86,7 @@ public class UserResource {
     }
 
     /**
-     * GET  /users/:login : get the "login" user.
+     * GET /users/:login : get the "login" user.
      *
      * @param login the login of the user to find
      * @return the ResponseEntity with status 200 (OK) and with body the "login" user, or with status 404 (Not Found)
@@ -104,5 +99,4 @@ public class UserResource {
             userService.getUserWithAuthoritiesByLogin(login)
                 .map(UserDTO::new));
     }
-
 }

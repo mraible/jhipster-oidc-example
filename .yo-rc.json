@@ -4,7 +4,7 @@
       "packageName": "com.okta.developer",
       "nativeLanguage": "en"
     },
-    "jhipsterVersion": "4.10.0",
+    "jhipsterVersion": "4.14.3",
     "baseName": "oidc",
     "packageName": "com.okta.developer",
     "packageFolder": "com/okta/developer",
@@ -35,6 +35,8 @@
     "languages": [
       "en",
       "fr"
-    ]
+    ],
+    "cacheProvider": "ehcache",
+    "enableHibernateCache": true
   }
 }
